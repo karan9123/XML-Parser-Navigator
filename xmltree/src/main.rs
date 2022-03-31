@@ -2,7 +2,6 @@ use crate::tree::ElementTree;
 
 mod tree;
 mod element;
-mod version;
 mod errors;
 
 fn main() {
