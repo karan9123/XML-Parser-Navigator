@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fmt;
 use std::io::{Read, Write};
 use std::iter::Filter;
@@ -6,19 +7,18 @@ use std::slice::{Iter, IterMut};
 use std::str::FromStr;
 use std::string::ToString;
 
-use indexmap::IndexMap;
-
-use crate::{Document, TreexmlError};
+use crate::errors::XmlErrors;
+use crate::tree::ElementTree;
 
 /// An XML element
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Element {
     /// Tag prefix, used for namespacing: `xsl` in `xsl:for-each`
-    pub prefix: Option<String>,
+    pub namespace: Option<String>,
     /// Tag name: `for-each` in `xsl:for-each`
-    pub name: String,
+    pub tag: String,
     /// Tag attributes
-    pub attributes: IndexMap<String, String>,
+    pub attributes: HashMap<String, String>, // make &str from String
     /// A vector of child elements
     pub children: Vec<Element>,
     /// Contents of the element
@@ -27,12 +27,13 @@ pub struct Element {
     pub cdata: Option<String>,
 }
 
+
 impl Default for Element {
     fn default() -> Self {
         Element {
-            prefix: None,
-            name: "tag".to_owned(),
-            attributes: IndexMap::new(),
+            namespace: None,
+            tag: "tag".to_owned(),
+            attributes: HashMap::new(),
             children: Vec::new(),
             text: None,
             cdata: None,
@@ -47,7 +48,7 @@ impl Element {
             S: ToString,
     {
         Element {
-            name: name.to_string(),
+            tag: name.to_string(),
             ..Element::default()
         }
     }
@@ -56,16 +57,16 @@ impl Element {
     pub(crate) fn parse<R: Read>(
         &mut self,
         mut reader: &mut xml::reader::EventReader<R>,
-    ) -> Result<(), TreexmlError> {
+    ) -> Result<(), XmlErrors> {
         use xml::reader::XmlEvent;
 
         loop {
-            let ev = reader.next()?;
+            let ev = reader.next().unwrap();
             match ev {
                 XmlEvent::StartElement {
                     name, attributes, ..
                 } => {
-                    let mut attr_map = IndexMap::new();
+                    let mut attr_map = HashMap::new();
                     for attr in attributes {
                         let attr_name = match attr.name.prefix {
                             Some(prefix) => format!("{}:{}", prefix, attr.name.local_name),
@@ -75,8 +76,8 @@ impl Element {
                     }
 
                     let mut child = Element {
-                        prefix: name.prefix,
-                        name: name.local_name,
+                        namespace: name.prefix,
+                        tag: name.local_name,
                         attributes: attr_map,
                         ..Element::default()
                     };
@@ -84,11 +85,11 @@ impl Element {
                     self.children.push(child);
                 }
                 XmlEvent::EndElement { name } => {
-                    if name.prefix == self.prefix && name.local_name == self.name {
+                    if name.prefix == self.namespace && name.local_name == self.tag {
                         return Ok(());
                     } else {
                         // This should never happen, since the base xml library will panic first
-                        panic!("Unexpected closing tag: {}, expected {}", name, self.name);
+                        panic!("Unexpected closing tag: {}, expected {}", name, self.tag);
                     }
                 }
                 XmlEvent::Characters(s) => {
@@ -118,13 +119,13 @@ impl Element {
     pub(crate) fn write<W: Write>(
         &self,
         writer: &mut xml::writer::EventWriter<W>,
-    ) -> Result<(), TreexmlError> {
+    ) -> Result<(), XmlErrors> {
         use xml::attribute::Attribute;
         use xml::name::Name;
         use xml::namespace::Namespace;
         use xml::writer::XmlEvent;
 
-        let name = Name::local(&self.name);
+        let name = Name::local(&self.tag);
         let mut attributes = Vec::with_capacity(self.attributes.len());
         for (k, v) in &self.attributes {
             attributes.push(Attribute {
@@ -139,20 +140,20 @@ impl Element {
             name,
             attributes: Cow::Owned(attributes),
             namespace: Cow::Owned(namespace),
-        })?;
+        }).unwrap();
 
         if let Some(ref text) = self.text {
-            writer.write(XmlEvent::Characters(&text[..]))?;
+            writer.write(XmlEvent::Characters(&text[..])).unwrap();
         }
         if let Some(ref cdata) = self.cdata {
-            writer.write(XmlEvent::CData(&cdata[..]))?;
+            writer.write(XmlEvent::CData(&cdata[..])).unwrap();
         }
 
         for e in &self.children {
             e.write(writer)?;
         }
 
-        writer.write(XmlEvent::EndElement { name: Some(name) })?;
+        writer.write(XmlEvent::EndElement { name: Some(name) }).unwrap();
 
         Ok(())
     }
@@ -174,15 +175,15 @@ impl Element {
     }
 
     /// Traverse element using an xpath-like string: root/child/a
-    pub fn find(&self, path: &str) -> Result<&Element, TreexmlError> {
+    pub fn find(&self, path: &str) -> Result<&Element, XmlErrors> {
         Self::find_path(&path.split('/').collect::<Vec<&str>>(), path, self)
     }
 
-    pub fn find_value<T: FromStr>(&self, path: &str) -> Result<Option<T>, TreexmlError> {
+    pub fn find_value<T: FromStr>(&self, path: &str) -> Result<Option<T>, XmlErrors> {
         let el = self.find(path)?;
         if let Some(text) = el.text.as_ref() {
             match T::from_str(text) {
-                Err(_) => Err(TreexmlError::ValueFromStr {
+                Err(_) => Err(XmlErrors::ValueFromStr {
                     t: text.to_string(),
                 }),
                 Ok(value) => Ok(Some(value)),
@@ -196,14 +197,14 @@ impl Element {
         path: &[&str],
         original: &str,
         tree: &'a Element,
-    ) -> Result<&'a Element, TreexmlError> {
+    ) -> Result<&'a Element, XmlErrors> {
         if path.is_empty() {
             return Ok(tree);
         }
 
-        match tree.find_child(|t| t.name == path[0]) {
+        match tree.find_child(|t| t.tag == path[0]) {
             Some(element) => Self::find_path(&path[1..], original, element),
-            None => Err(TreexmlError::ElementNotFound { t: original.into() }),
+            None => Err(XmlErrors::ElementNotFound { t: original.into() }),
         }
     }
 
@@ -226,9 +227,9 @@ impl Element {
 
 impl fmt::Display for Element {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let doc = Document {
+        let doc = ElementTree {
             root: Some(self.clone()),
-            ..Document::default()
+            ..ElementTree::default()
         };
         let mut v = Vec::<u8>::new();
         doc.write_with(&mut v, false, "  ", true).unwrap();
@@ -266,7 +267,7 @@ impl ElementBuilder {
         where
             S: ToString,
     {
-        self.element.prefix = Some(prefix.to_string());
+        self.element.namespace = Some(prefix.to_string());
         self
     }
 

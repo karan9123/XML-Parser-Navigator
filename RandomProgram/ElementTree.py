@@ -33,7 +33,7 @@
 
 """
 
-#---------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Licensed to PSF under a Contributor Agreement.
 # See https://www.python.org/psf/license for licensing details.
 #
@@ -88,7 +88,7 @@ __all__ = [
     "XMLParser", "XMLPullParser",
     "register_namespace",
     "canonicalize", "C14NWriterTarget",
-    ]
+]
 
 VERSION = "1.3.0"
 
@@ -113,6 +113,7 @@ class ParseError(SyntaxError):
 
     """
     pass
+
 
 # --------------------------------------------------------------------
 
@@ -197,7 +198,7 @@ class Element:
         warnings.warn(
             "elem.copy() is deprecated. Use copy.copy(elem) instead.",
             DeprecationWarning
-            )
+        )
         return self.__copy__()
 
     def __copy__(self):
@@ -215,8 +216,8 @@ class Element:
             "The behavior of this method will change in future versions.  "
             "Use specific 'len(elem)' or 'elem is not None' test instead.",
             FutureWarning, stacklevel=2
-            )
-        return len(self._children) != 0 # emulate old behaviour, for now
+        )
+        return len(self._children) != 0  # emulate old behaviour, for now
 
     def __getitem__(self, index):
         return self._children[index]
@@ -470,6 +471,7 @@ def ProcessingInstruction(target, text=None):
         element.text = element.text + " " + text
     return element
 
+
 PI = ProcessingInstruction
 
 
@@ -487,36 +489,46 @@ class QName:
     be interpreted as a local name.
 
     """
+
     def __init__(self, text_or_uri, tag=None):
         if tag:
             text_or_uri = "{%s}%s" % (text_or_uri, tag)
         self.text = text_or_uri
+
     def __str__(self):
         return self.text
+
     def __repr__(self):
         return '<%s %r>' % (self.__class__.__name__, self.text)
+
     def __hash__(self):
         return hash(self.text)
+
     def __le__(self, other):
         if isinstance(other, QName):
             return self.text <= other.text
         return self.text <= other
+
     def __lt__(self, other):
         if isinstance(other, QName):
             return self.text < other.text
         return self.text < other
+
     def __ge__(self, other):
         if isinstance(other, QName):
             return self.text >= other.text
         return self.text >= other
+
     def __gt__(self, other):
         if isinstance(other, QName):
             return self.text > other.text
         return self.text > other
+
     def __eq__(self, other):
         if isinstance(other, QName):
             return self.text == other.text
         return self.text == other
+
 
 # --------------------------------------------------------------------
 
@@ -532,9 +544,10 @@ class ElementTree:
     contents will be used to initialize the tree with.
 
     """
+
     def __init__(self, element=None, file=None):
         # assert element is None or iselement(element)
-        self._root = element # first node
+        self._root = element  # first node
         if file:
             self.parse(file)
 
@@ -620,7 +633,7 @@ class ElementTree:
                 "fixed in a future version.  If you rely on the current "
                 "behaviour, change it to %r" % path,
                 FutureWarning, stacklevel=2
-                )
+            )
         return self._root.find(path, namespaces)
 
     def findtext(self, path, default=None, namespaces=None):
@@ -642,7 +655,7 @@ class ElementTree:
                 "fixed in a future version.  If you rely on the current "
                 "behaviour, change it to %r" % path,
                 FutureWarning, stacklevel=2
-                )
+            )
         return self._root.findtext(path, default, namespaces)
 
     def findall(self, path, namespaces=None):
@@ -664,7 +677,7 @@ class ElementTree:
                 "fixed in a future version.  If you rely on the current "
                 "behaviour, change it to %r" % path,
                 FutureWarning, stacklevel=2
-                )
+            )
         return self._root.findall(path, namespaces)
 
     def iterfind(self, path, namespaces=None):
@@ -686,7 +699,7 @@ class ElementTree:
                 "fixed in a future version.  If you rely on the current "
                 "behaviour, change it to %r" % path,
                 FutureWarning, stacklevel=2
-                )
+            )
         return self._root.iterfind(path, namespaces)
 
     def write(self, file_or_filename,
@@ -730,8 +743,8 @@ class ElementTree:
         enc_lower = encoding.lower()
         with _get_writer(file_or_filename, enc_lower) as write:
             if method == "xml" and (xml_declaration or
-                    (xml_declaration is None and
-                     enc_lower not in ("utf-8", "us-ascii", "unicode"))):
+                                    (xml_declaration is None and
+                                     enc_lower not in ("utf-8", "us-ascii", "unicode"))):
                 declared_encoding = encoding
                 if enc_lower == "unicode":
                     # Retrieve the default encoding for the xml declaration
@@ -750,6 +763,7 @@ class ElementTree:
     def write_c14n(self, file):
         # lxml.etree compatibility.  use output method instead
         return self.write(file, method="c14n")
+
 
 # --------------------------------------------------------------------
 # serialization support
@@ -806,6 +820,7 @@ def _get_writer(file_or_filename, encoding):
                 stack.callback(file.detach)
                 yield file.write
 
+
 def _namespaces(elem, default_namespace=None):
     # identify namespaces used in this tree
 
@@ -832,14 +847,14 @@ def _namespaces(elem, default_namespace=None):
                 if prefix:
                     qnames[qname] = "%s:%s" % (prefix, tag)
                 else:
-                    qnames[qname] = tag # default element
+                    qnames[qname] = tag  # default element
             else:
                 if default_namespace:
                     # FIXME: can this be handled in XML 1.0?
                     raise ValueError(
                         "cannot use non-qualified names with "
                         "default_namespace option"
-                        )
+                    )
                 qnames[qname] = qname
         except TypeError:
             _raise_serialization_error(qname)
@@ -866,6 +881,7 @@ def _namespaces(elem, default_namespace=None):
         if isinstance(text, QName) and text.text not in qnames:
             add_qname(text.text)
     return qnames, namespaces
+
 
 def _serialize_xml(write, elem, qnames, namespaces,
                    short_empty_elements, **kwargs):
@@ -895,7 +911,7 @@ def _serialize_xml(write, elem, qnames, namespaces,
                         write(" xmlns%s=\"%s\"" % (
                             k,
                             _escape_attrib(v)
-                            ))
+                        ))
                 for k, v in items:
                     if isinstance(k, QName):
                         k = k.text
@@ -917,9 +933,11 @@ def _serialize_xml(write, elem, qnames, namespaces,
     if elem.tail:
         write(_escape_cdata(elem.tail))
 
+
 HTML_EMPTY = {"area", "base", "basefont", "br", "col", "embed", "frame", "hr",
               "img", "input", "isindex", "link", "meta", "param", "source",
               "track", "wbr"}
+
 
 def _serialize_html(write, elem, qnames, namespaces, **kwargs):
     tag = elem.tag
@@ -947,7 +965,7 @@ def _serialize_html(write, elem, qnames, namespaces, **kwargs):
                         write(" xmlns%s=\"%s\"" % (
                             k,
                             _escape_attrib(v)
-                            ))
+                        ))
                 for k, v in items:
                     if isinstance(k, QName):
                         k = k.text
@@ -971,18 +989,20 @@ def _serialize_html(write, elem, qnames, namespaces, **kwargs):
     if elem.tail:
         write(_escape_cdata(elem.tail))
 
+
 def _serialize_text(write, elem):
     for part in elem.itertext():
         write(part)
     if elem.tail:
         write(elem.tail)
 
+
 _serialize = {
     "xml": _serialize_xml,
     "html": _serialize_html,
     "text": _serialize_text,
-# this optional method is imported at the end of the module
-#   "c14n": _serialize_c14n,
+    # this optional method is imported at the end of the module
+    #   "c14n": _serialize_c14n,
 }
 
 
@@ -1005,6 +1025,7 @@ def register_namespace(prefix, uri):
             del _namespace_map[k]
     _namespace_map[uri] = prefix
 
+
 _namespace_map = {
     # "well-known" namespace prefixes
     "http://www.w3.org/XML/1998/namespace": "xml",
@@ -1020,10 +1041,12 @@ _namespace_map = {
 # For tests and troubleshooting
 register_namespace._namespace_map = _namespace_map
 
+
 def _raise_serialization_error(text):
     raise TypeError(
         "cannot serialize %r (type %s)" % (text, type(text).__name__)
-        )
+    )
+
 
 def _escape_cdata(text):
     # escape character data
@@ -1040,6 +1063,7 @@ def _escape_cdata(text):
         return text
     except (TypeError, AttributeError):
         _raise_serialization_error(text)
+
 
 def _escape_attrib(text):
     # escape attribute value
@@ -1069,6 +1093,7 @@ def _escape_attrib(text):
     except (TypeError, AttributeError):
         _raise_serialization_error(text)
 
+
 def _escape_attrib_html(text):
     # escape attribute value
     try:
@@ -1081,6 +1106,7 @@ def _escape_attrib_html(text):
         return text
     except (TypeError, AttributeError):
         _raise_serialization_error(text)
+
 
 # --------------------------------------------------------------------
 
@@ -1108,8 +1134,10 @@ def tostring(element, encoding=None, method=None, *,
                                short_empty_elements=short_empty_elements)
     return stream.getvalue()
 
+
 class _ListDataStream(io.BufferedIOBase):
     """An auxiliary stream accumulating into a list reference."""
+
     def __init__(self, lst):
         self.lst = lst
 
@@ -1124,6 +1152,7 @@ class _ListDataStream(io.BufferedIOBase):
 
     def tell(self):
         return len(self.lst)
+
 
 def tostringlist(element, encoding=None, method=None, *,
                  xml_declaration=None, default_namespace=None,
@@ -1267,6 +1296,7 @@ def iterparse(source, events=None, parser=None):
 
     class IterParseIterator(collections.abc.Iterator):
         __next__ = iterator(source).__next__
+
     it = IterParseIterator()
     it.root = None
     del iterator, IterParseIterator
@@ -1366,8 +1396,10 @@ def XMLID(text, parser=None):
             ids[id] = elem
     return tree, ids
 
+
 # Parse XML document from string constant.  Alias for XML().
 fromstring = XML
+
 
 def fromstringlist(sequence, parser=None):
     """Parse XML document from sequence of string fragments.
@@ -1383,6 +1415,7 @@ def fromstringlist(sequence, parser=None):
     for text in sequence:
         parser.feed(text)
     return parser.close()
+
 
 # --------------------------------------------------------------------
 
@@ -1407,14 +1440,15 @@ class TreeBuilder:
     instead of the standard factory.  If *insert_pis* is false (the default),
     processing instructions will not be inserted into the tree.
     """
+
     def __init__(self, element_factory=None, *,
                  comment_factory=None, pi_factory=None,
                  insert_comments=False, insert_pis=False):
-        self._data = [] # data collector
-        self._elem = [] # element stack
-        self._last = None # last element
-        self._root = None # root element
-        self._tail = None # true if we're after an end tag
+        self._data = []  # data collector
+        self._elem = []  # element stack
+        self._last = None  # last element
+        self._root = None  # root element
+        self._tail = None  # true if we're after an end tag
         if comment_factory is None:
             comment_factory = Comment
         self._comment_factory = comment_factory
@@ -1474,9 +1508,9 @@ class TreeBuilder:
         """
         self._flush()
         self._last = self._elem.pop()
-        assert self._last.tag == tag,\
-               "end tag mismatch (expected %s, got %s)" % (
-                   self._last.tag, tag)
+        assert self._last.tag == tag, \
+            "end tag mismatch (expected %s, got %s)" % (
+                self._last.tag, tag)
         self._tail = 1
         return self._last
 
@@ -1528,7 +1562,7 @@ class XMLParser:
             except ImportError:
                 raise ImportError(
                     "No module named expat; use SimpleXMLTreeBuilder instead"
-                    )
+                )
         parser = expat.ParserCreate(encoding, "}")
         if target is None:
             target = TreeBuilder()
@@ -1536,7 +1570,7 @@ class XMLParser:
         self.parser = self._parser = parser
         self.target = self._target = target
         self._error = expat.error
-        self._names = {} # name memo cache
+        self._names = {}  # name memo cache
         # main callbacks
         parser.DefaultHandlerExpand = self._default
         if hasattr(target, 'start'):
@@ -1562,7 +1596,7 @@ class XMLParser:
         try:
             self.version = "Expat %d.%d.%d" % expat.version_info
         except AttributeError:
-            pass # unknown
+            pass  # unknown
 
     def _setevents(self, events_queue, events_to_report):
         # Internal API for XMLPullParser
@@ -1576,14 +1610,17 @@ class XMLParser:
         for event_name in events_to_report:
             if event_name == "start":
                 parser.ordered_attributes = 1
+
                 def handler(tag, attrib_in, event=event_name, append=append,
                             start=self._start):
                     append((event, start(tag, attrib_in)))
+
                 parser.StartElementHandler = handler
             elif event_name == "end":
                 def handler(tag, event=event_name, append=append,
                             end=self._end):
                     append((event, end(tag)))
+
                 parser.EndElementHandler = handler
             elif event_name == "start-ns":
                 # TreeBuilder does not implement .start_ns()
@@ -1608,11 +1645,13 @@ class XMLParser:
             elif event_name == 'comment':
                 def handler(text, event=event_name, append=append, self=self):
                     append((event, self.target.comment(text)))
+
                 parser.CommentHandler = handler
             elif event_name == 'pi':
                 def handler(pi_target, data, event=event_name, append=append,
                             self=self):
                     append((event, self.target.pi(pi_target, data)))
+
                 parser.ProcessingInstructionHandler = handler
             else:
                 raise ValueError("unknown event %r" % event_name)
@@ -1649,7 +1688,7 @@ class XMLParser:
         attrib = {}
         if attr_list:
             for i in range(0, len(attr_list), 2):
-                attrib[fixname(attr_list[i])] = attr_list[i+1]
+                attrib[fixname(attr_list[i])] = attr_list[i + 1]
         return self.target.start(tag, attrib)
 
     def _end(self, tag):
@@ -1670,14 +1709,14 @@ class XMLParser:
                 err = expat.error(
                     "undefined entity %s: line %d, column %d" %
                     (text, self.parser.ErrorLineNumber,
-                    self.parser.ErrorColumnNumber)
-                    )
-                err.code = 11 # XML_ERROR_UNDEFINED_ENTITY
+                     self.parser.ErrorColumnNumber)
+                )
+                err.code = 11  # XML_ERROR_UNDEFINED_ENTITY
                 err.lineno = self.parser.ErrorLineNumber
                 err.offset = self.parser.ErrorColumnNumber
                 raise err
         elif prefix == "<" and text[:9] == "<!DOCTYPE":
-            self._doctype = [] # inside a doctype declaration
+            self._doctype = []  # inside a doctype declaration
         elif self._doctype is not None:
             # parse doctype contents
             if prefix == ">":
@@ -1719,7 +1758,7 @@ class XMLParser:
     def close(self):
         """Finish feeding data to parser and return element structure."""
         try:
-            self.parser.Parse(b"", True) # end of data
+            self.parser.Parse(b"", True)  # end of data
         except self._error as v:
             self._raiseerror(v)
         try:
@@ -1792,6 +1831,7 @@ class C14NWriterTarget:
     - *exclude_attrs*: a set of attribute names that should not be serialised
     - *exclude_tags*: a set of tag names that should not be serialised
     """
+
     def __init__(self, write, *,
                  with_comments=False, strip_text=False, rewrite_prefixes=False,
                  qname_aware_tags=None, qname_aware_attrs=None,
