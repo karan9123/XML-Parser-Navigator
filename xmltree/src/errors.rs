@@ -1,9 +1,4 @@
-use std::borrow::Cow;
 use std::fmt;
-use std::fmt::write;
-use std::io::Error;
-use xml::common::Position;
-use xml::reader::ErrorKind;
 
 #[derive(Debug)]
 pub enum XmlErrors{
@@ -11,7 +6,6 @@ pub enum XmlErrors{
     ValueFromStr { t: String},
     ParseError{source: xml::reader::Error},
     WriteError{source: xml::writer::Error},
-    //ParseError and WriteError: to see if needed
 }
 impl fmt::Display for XmlErrors {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -23,12 +17,20 @@ impl fmt::Display for XmlErrors {
         }
     }
 }
-/*impl<'a, P, M> From<(&'a P, M)> for XmlErrors where P: Position, M: Into<Cow<'static, str>> {
-    fn from(orig: (&'a P, M)) -> Self {
-        let k:xml::reader::Error  = xml::reader::Error{
-            pos: orig.0.position(),
-            kind: (&event_reader, "custom error").into()
-        };
-        XmlErrors::ParseError { source: k}
+
+impl From<xml::reader::Error> for XmlErrors{
+    fn from(err: xml::reader::Error) -> Self {
+        XmlErrors::ParseError { source: err}
     }
-}*/
+}
+impl From<xml::writer::Error> for XmlErrors{
+    fn from(err: xml::writer::Error) -> Self {
+        XmlErrors::WriteError { source: err }
+    }
+}
+
+impl From<XmlErrors> for std::fmt::Error{
+    fn from(_: XmlErrors) -> fmt::Error {
+        fmt::Error{}
+    }
+}

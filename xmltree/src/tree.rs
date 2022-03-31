@@ -10,16 +10,16 @@ use crate::errors::XmlErrors;
 
 pub struct ElementTree {
     pub(crate) root: Option<Element>,
-    // pub(crate) version: XmlVersion,
-    // pub(crate) encoding: String,
+    pub(crate) version: XmlVersion,
+    pub(crate) encoding: String,
 }
 
 impl Default for ElementTree {
     fn default() -> Self {
         ElementTree {
             root: None,
-            // version: XmlVersion::Version10,
-            // encoding: "UTF-8".to_string(),
+            version: XmlVersion::Version10,
+            encoding: "UTF-8".to_string(),
         }
     }
 }
@@ -71,7 +71,7 @@ impl ElementTree {
         let mut tree = ElementTree::new();
 
         loop {
-            let event = parser.next().unwrap();
+            let event = parser.next()?;
             match event {
                 /*  XmlEvent::StartDocument {
                       version, encoding, ..
@@ -94,7 +94,7 @@ impl ElementTree {
                         attributes: attribute,
                         ..Element::default()
                     };
-                    root.parse(&mut parser).unwrap();
+                    root.parse(&mut parser)?;
                     tree.root = Some(root);
                 }
                 XmlEvent::EndDocument => break,
@@ -123,10 +123,10 @@ impl ElementTree {
                 version: self.version.into(),
                 encoding: Some(&self.encoding),
                 standalone: None,
-            }).unwrap();
+            })?;
         }
         if let Some(ref e) = self.root {
-            e.write(&mut writer).unwrap();
+            e.write(&mut writer)?;
         }
         Ok(())
     }
@@ -136,7 +136,7 @@ impl ElementTree {
 impl fmt::Display for ElementTree {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut vec = Vec::<u8>::new();
-        self.write(&mut vec).unwrap();
+        self.write(&mut vec)?;
         let strng = String::from_utf8(vec).unwrap();
         f.write_str(&strng[..])
     }

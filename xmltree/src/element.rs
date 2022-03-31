@@ -61,7 +61,7 @@ impl Element {
         use xml::reader::XmlEvent;
 
         loop {
-            let ev = reader.next().unwrap();
+            let ev = reader.next()?;
             match ev {
                 XmlEvent::StartElement {
                     name, attributes, ..
