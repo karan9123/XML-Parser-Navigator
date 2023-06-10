@@ -4,22 +4,24 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::io::{Read, Write};
 use std::iter::Filter;
-use std::slice::{Iter};
+use std::slice::Iter;
 use crate::errors::XmlErrors;
 use crate::tree::ElementTree;
 
 /// An XML element
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Element {
-    // An individual Element contains the tag, its corresponding children,
-    // attributes and text
+    /// The namespace of the element
     pub namespace: Option<String>,
+    /// The tag name of the element
     pub tag: String,
+    /// The attributes of the element
     pub attributes: HashMap<String, String>,
+    /// The child elements of the element
     pub children: Vec<Element>,
+    /// The text content of the element
     pub text: Option<String>,
 }
-
 
 impl Hash for Element {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -60,12 +62,14 @@ impl Element {
         mut xml_reader: &mut xml::reader::EventReader<R>,
     ) -> Result<(), XmlErrors> {
         use xml::reader::XmlEvent;
-        // use xml readers parser to read XML events.
+
         loop {
             let xml_event_type = xml_reader.next()?;
             match xml_event_type {
                 XmlEvent::StartElement {
-                    name, attributes, ..
+                    name,
+                    attributes,
+                    ..
                 } => {
                     let mut attr_map = HashMap::new();
                     for attr in attributes {
@@ -93,8 +97,8 @@ impl Element {
                     }
                 }
                 XmlEvent::Characters(s) => {
-                    let text = match self.text {
-                        Some(ref v) => v.clone(),
+                    let text = match &self.text {
+                        Some(v) => v.clone(),
                         None => String::new(),
                     };
                     self.text = Some(text + &s);
@@ -108,7 +112,6 @@ impl Element {
             }
         }
     }
-
 
     /// Write an element and its contents to `writer`
     pub(crate) fn write<W: Write>(
@@ -133,37 +136,34 @@ impl Element {
 
         writer.write(XmlEvent::StartElement {
             name,
-            // use a clone on write smart pointer here for 
             attributes: Cow::Owned(attributes),
             namespace: Cow::Owned(namespace),
-        }).unwrap();
+        })?;
 
         if let Some(ref text) = self.text {
-            writer.write(XmlEvent::Characters(&text[..])).unwrap();
+            writer.write(XmlEvent::Characters(&text[..]))?;
         }
         for e in &self.children {
             e.write(writer)?;
         }
 
-        writer.write(XmlEvent::EndElement { name: Some(name) }).unwrap();
+        writer.write(XmlEvent::EndElement { name: Some(name) })?;
 
         Ok(())
     }
 
-
     /// Find a single child of the current `Element`, given a predicate
     pub fn find_child<P>(&self, predicate: P) -> Option<&Element>
-        where
-            P: for<'r> Fn(&'r &Element) -> bool,
+    where
+        P: for<'r> Fn(&'r &Element) -> bool,
     {
         self.children.iter().find(predicate)
     }
 
-
     /// Filters the children of the current `Element`, given a predicate
     pub fn filter_children<P>(&self, predicate: P) -> Filter<Iter<Element>, P>
-        where
-            P: for<'r> Fn(&'r &Element) -> bool,
+    where
+        P: for<'r> Fn(&'r &Element) -> bool,
     {
         self.children.iter().filter(predicate)
     }
@@ -176,9 +176,8 @@ impl fmt::Display for Element {
             ..ElementTree::default()
         };
         let mut v = Vec::<u8>::new();
-        doc.write_with(&mut v, false, "  ", true).unwrap();
+        doc.write_with(&mut v, false, "  ", true)?;
         let s = String::from_utf8(v).unwrap();
         f.write_str(&s[..])
     }
 }
-
